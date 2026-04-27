@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    image: trabalho-thread-java:latest
+    container_name: trabalho-thread-java
+    volumes:
+      - ./dataset_g:/datasets/dataset_g:ro
+      - ./dataset_p:/datasets/dataset_p:ro
+    environment:
+      DATASET_G_DIR: /datasets/dataset_g
+      DATASET_P_DIR: /datasets/dataset_p
+    command: ["sync", "Sharon Sullivan"]
+
