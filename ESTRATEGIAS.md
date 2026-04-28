@@ -3,8 +3,8 @@
 Este documento organiza as ideias de busca síncrona e assíncrona em uma estrutura única.
 A intenção é separar três coisas que estavam misturadas nas anotações:
 
-- `MODE`: como executar
 - `TYPE`: qual estratégia usar
+- `MODE`: como executar a estratégia
 - `RESULT_DIR`: onde salvar métricas e saídas auxiliares
 
 ## Objetivo
@@ -29,6 +29,21 @@ Ou seja:
 - a estratégia define o algoritmo
 - o modo define a forma de execução
 
+## Estado atual da configuração
+
+Hoje a configuração prática ficou assim:
+
+- `.env` e `.env.example` guardam apenas os diretórios
+- `MODE` não precisa ficar em variável de ambiente
+- `TYPE` deve ser passado na chamada do runner ou do `make`
+- `benchmark` deve disparar o runner várias vezes, uma por estratégia
+
+Exemplos atuais:
+
+- `make sync TYPE=1`
+- `make async TYPE=2`
+- `make benchmark TYPES="1 2 3 4 5"`
+
 ## Proposta de contratos
 
 ### `MODE`
@@ -38,6 +53,11 @@ Define o modelo de execução.
 - `sync`: execução sequencial
 - `async` ou `parallel`: execução concorrente com threads
 
+Observação:
+
+- `MODE` não precisa ser persistido no `.env`
+- ele pode ser um argumento de execução, um parâmetro do runner ou um alvo do `make`
+
 ### `TYPE`
 
 Define a estratégia concreta de busca.
@@ -45,10 +65,10 @@ Define a estratégia concreta de busca.
 Exemplo de mapa inicial:
 
 - `TYPE=1`: busca linha por linha
-- `TYPE=2`: carrega arquivo em memória e busca na lista de linhas
+- `TYPE=2`: família de estratégias em memória
 - `TYPE=3`: busca por regex
 - `TYPE=4`: busca por comparação manual de caracteres
-- `TYPE=5`: (somente asinc) estratégia composta em duas fases
+- `TYPE=5`: estratégia composta em duas fases
 
 ### `RESULT_DIR`
 
@@ -72,7 +92,7 @@ Exemplo de uso:
 | TYPE | Estratégia | Sync | Async | Observações |
 | --- | --- | --- | --- | --- |
 | 1 | Linha por linha | OK | OK | Base mais simples e útil como referência |
-| 2 | Arquivo inteiro em memória | OK | OK | Bom para comparar custo de I/O vs CPU |
+| 2 | Família de estratégias em memória | OK | OK | Pode ter subtipos internos |
 | 3 | Regex | OK | OK | Útil quando o padrão de busca for mais flexível |
 | 4 | Comparação por caractere | OK | OK | Boa para experimentar otimizações manuais |
 | 5 | Pipeline em duas fases | OK* | OK | Melhor candidato para composição e paralelismo |
@@ -94,19 +114,42 @@ Desvantagens:
 - não explora otimizações avançadas
 - pode ser lento em arquivos grandes
 
-### TYPE 2 - Arquivo inteiro em memória
+### TYPE 2 - Família de estratégias em memória
 
-Lê o arquivo todo para uma estrutura em memória e percorre a coleção de linhas depois.
+O `TYPE=2` representa uma família de variações em memória, não uma única implementação.
+
+Subtipos possíveis:
+
+- `ReadingOriginalFile`
+  - lê o arquivo original e processa o conteúdo diretamente
+- `InMemoryStrategyListStringByLine`
+  - carrega cada arquivo em `List<String>` e busca linha a linha
+- `InMemoryStrategyListStringByFile`
+  - carrega ou organiza a busca em estruturas em memória por arquivo
 
 Vantagens:
 
-- código simples
-- útil para experimentar custo de alocação e leitura
+- permite comparar custo de leitura e custo de processamento
+- abre espaço para medir diferenças entre representações internas
 
 Desvantagens:
 
-- maior consumo de memória
-- pode piorar em datasets grandes
+- aumenta a complexidade do `TYPE=2`
+- exige um contrato claro para diferenciar os subtipos
+
+### TYPE 2.1 - ReadingOriginalFile
+
+Lê o arquivo original e processa o conteúdo sem uma estrutura intermediária explícita.
+
+### TYPE 2.2 - InMemoryStrategyListStringByLine
+
+Carrega o arquivo em memória como lista de linhas e depois aplica a busca.
+
+### TYPE 2.3 - InMemoryStrategyListStringByFile
+
+Carrega a estrutura pensando mais no arquivo como unidade de processamento.
+
+O comportamento original de ler tudo em memória continua válido e deve ser tratado como uma das variações possíveis dentro da família `TYPE=2`, não como uma estratégia isolada.
 
 ### TYPE 3 - Regex
 
@@ -218,11 +261,9 @@ Exemplo de papel do `TYPE`:
 - `TYPE=1` -> `LineByLineStrategy`
 - `TYPE=4` -> `CharByCharStrategy`
 - `TYPE=3` -> `RegexStrategy`
-  
 - `TYPE=2` -> `ReadingOriginalFile`
 - `TYPE=2` -> `InMemoryStrategyListStringByLine`
 - `TYPE=2` -> `InMemoryStrategyListStringByFile`
-
 - `TYPE=5` -> `PipelineStrategy`
 
 ### Modo de execução
@@ -231,6 +272,17 @@ Exemplo:
 
 - `MODE=sync` -> executa a estratégia diretamente
 - `MODE=async` -> distribui a estratégia entre threads
+
+### Runner
+
+O runner deve ser a unidade usada para rodar uma sequência de experimentos.
+
+Responsabilidades:
+
+- receber `TYPE` e `MODE`
+- executar uma combinação por vez
+- registrar tempo e resultado
+- permitir múltiplas chamadas em sequência por `benchmark`
 
 ## Combinações recomendadas para teste
 
@@ -281,7 +333,7 @@ Hoje o projeto já tem uma boa base para isso:
 - versão paralela
 - `SearchMode` para escolher entre `sync` e `parallel`
 
-O próximo passo lógico é adicionar a noção de `TYPE`.
+O próximo passo lógico é adicionar a noção de `TYPE` e um runner que consiga ser acionado repetidas vezes pelo `make benchmark`.
 
 ## Proposta de evolução
 
