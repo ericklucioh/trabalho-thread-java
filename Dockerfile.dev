@@ -1,0 +1,11 @@
+FROM maven:3.9.9-eclipse-temurin-17
+
+WORKDIR /app
+
+COPY pom.xml .
+RUN mvn -q -DskipTests dependency:go-offline
+
+COPY scripts/dev-watch.sh /usr/local/bin/dev-watch.sh
+RUN chmod +x /usr/local/bin/dev-watch.sh
+
+CMD ["/usr/local/bin/dev-watch.sh"]

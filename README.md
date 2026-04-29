@@ -18,18 +18,32 @@ docker compose up --build
 O `command` padrão no `docker-compose.yml` está configurado para:
 
 ```bash
-java -jar app.jar sync "Sharon Sullivan"
+java -jar app.jar "$MODE" "$TARGET"
 ```
 
-Para testar outro nome:
+Defina `MODE` e `TARGET` no `.env` antes de subir.
 
 ```bash
-docker compose run --rm app parallel "Karen Reyes MD"
+docker compose run --rm app
+```
+
+## Modo dev com recarga
+
+Para recompilar e rerodar automaticamente quando `src/main/java` mudar:
+
+```bash
+docker compose up --build dev
+```
+
+Você pode mudar o alvo sem editar o compose:
+
+```bash
+TARGET="<target>" docker compose up --build dev
 ```
 
 ## Executar localmente
 
 ```bash
 mvn -q -DskipTests package
-java -jar target/trabalho-thread-java-1.0.0-SNAPSHOT.jar sync "Sharon Sullivan"
+java -jar target/trabalho-thread-java-1.0.0-SNAPSHOT.jar sync "$TARGET"
 ```

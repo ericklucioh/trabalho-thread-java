@@ -3,11 +3,23 @@ services:
     build: .
     image: trabalho-thread-java:latest
     container_name: trabalho-thread-java
+    env_file:
+      - .env
     volumes:
-      - ./dataset_g:/datasets/dataset_g:ro
-      - ./dataset_p:/datasets/dataset_p:ro
-    environment:
-      DATASET_G_DIR: /datasets/dataset_g
-      DATASET_P_DIR: /datasets/dataset_p
-    command: ["sync", "Sharon Sullivan"]
+      - ./dataset_g:/app/dataset_g:ro
+      - ./dataset_p:/app/dataset_p:ro
+      - ./results:/app/results
+    command: ["${MODE}", "${TARGET}"]
 
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: trabalho-thread-java-dev
+    working_dir: /app
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - ./results:/app/results
+    command: ["/usr/local/bin/dev-watch.sh"]

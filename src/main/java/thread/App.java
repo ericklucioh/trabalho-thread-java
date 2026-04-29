@@ -1,23 +1,19 @@
 package thread;
 
-import model.CharByCharFinder;
-import model.Dataset;
-import model.DatasetType;
-import model.Executor;
-import model.Finder;
-import model.InMemory;
-import model.LineByLineFinder;
-import model.Result;
-import model.RegexFinder;
 import thread.search.ParallelSearchService;
 import thread.search.SearchMode;
 import thread.search.SearchResult;
 import thread.search.SearchService;
 import thread.search.SequentialSearchService;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public final class App {
 
@@ -30,12 +26,6 @@ public final class App {
             System.exit(1);
         }
 
-        List<Dataset> datasets = buildDatasets();
-        List<Path> datasetDirectories = datasets.stream()
-                .map(dataset -> Path.of(dataset.folder()))
-                .toList();
-        Executor executor = buildExecutor();
-
         SearchMode mode = SearchMode.from(args[0]);
         String target = args[1];
         SearchService searchService = mode == SearchMode.PARALLEL
@@ -43,7 +33,7 @@ public final class App {
                 : new SequentialSearchService();
 
         long startedAt = System.nanoTime();
-        List<SearchResult> results = searchService.search(datasetDirectories, target);
+        List<SearchResult> results = searchService.search(buildDatasetDirectories(), target);
         long elapsedNanos = System.nanoTime() - startedAt;
 
         if (results.isEmpty()) {
@@ -60,55 +50,102 @@ public final class App {
         }
 
         System.out.printf("Modo: %s | tempo: %.3f ms%n", mode.name().toLowerCase(), elapsedNanos / 1_000_000.0);
+        writeResultsCsv(mode, target, results, elapsedNanos);
     }
 
-    private static Executor buildExecutor() {
-        return new Executor(buildFinder(), InMemory.NONE);
+    private static List<Path> buildDatasetDirectories() {
+        String datasetGDir = requiredEnv("DATASET_G_DIR");
+        String datasetPDir = requiredEnv("DATASET_P_DIR");
+
+        List<Path> datasetDirectories = new ArrayList<>();
+        datasetDirectories.add(Path.of(datasetGDir));
+        datasetDirectories.add(Path.of(datasetPDir));
+        return List.copyOf(datasetDirectories);
     }
 
-    private static Finder buildFinder() {
-        String rawFinder = System.getenv().getOrDefault("FINDER_MODE", "line_by_line").toLowerCase();
-        return switch (rawFinder) {
-            case "line_by_line", "line", "line-by-line" -> new LineByLineFinder();
-            case "char_by_char", "char", "char-by-char" -> new CharByCharFinder();
-            case "regex" -> new RegexFinder();
-            default -> throw new IllegalArgumentException("Finder invalido: " + rawFinder);
-        };
-    }
-
-    private static List<Dataset> buildDatasets() {
-        List<Dataset> datasets = new ArrayList<>();
-        datasets.add(new DatasetSpec(
-                DatasetType.G,
-                System.getenv().getOrDefault("DATASET_G_DIR", "/datasets/dataset_g"),
-                "dataset_g",
-                10_000
-        ));
-        datasets.add(new DatasetSpec(
-                DatasetType.P,
-                System.getenv().getOrDefault("DATASET_P_DIR", "/datasets/dataset_p"),
-                "dataset_p",
-                10_000
-        ));
-        return List.copyOf(datasets);
+    private static String requiredEnv(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Variavel de ambiente obrigatoria ausente: " + name);
+        }
+        return value;
     }
 
     private static void printUsage() {
         System.out.println("Uso: java -jar app.jar <sync|parallel> <nome>");
+        System.out.println("As variaveis DATASET_G_DIR e DATASET_P_DIR devem estar definidas no ambiente.");
     }
 
-    private record DatasetSpec(
-            DatasetType type,
-            String folder,
-            String fileStructName,
-            int numOfLines
-    ) implements Dataset {
+    private static void writeResultsCsv(
+            SearchMode mode,
+            String target,
+            List<SearchResult> results,
+            long elapsedNanos
+    ) {
+        try {
+            Path resultsDir = Path.of(requiredEnv("RESULT_DIR"));
+            Path resultsCsv = resultsDir.resolve("search-results.csv");
+            Files.createDirectories(resultsDir);
+            List<String> lines = new ArrayList<>();
+            lines.add("mode;target;match;file;line;elapsed_ms");
 
-        @Override
-        public Result findName(String name) {
-            throw new UnsupportedOperationException(
-                    "Busca ainda nao implementada para o dataset " + type
+            if (results.isEmpty()) {
+                lines.add(csvRow(mode.name(), target, "NOT_FOUND", "", "", elapsedNanos));
+            } else {
+                for (SearchResult result : results) {
+                    lines.add(csvRow(
+                            mode.name(),
+                            target,
+                            result.match(),
+                            result.file().toString(),
+                            Long.toString(result.lineNumber()),
+                            elapsedNanos
+                    ));
+                }
+            }
+
+            Files.write(
+                    resultsCsv,
+                    lines,
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE
             );
+            System.out.printf("CSV gerado em: %s%n", resultsCsv.toAbsolutePath());
+        } catch (IOException exception) {
+            throw new IllegalStateException("Falha ao gerar CSV de resultados", exception);
         }
+    }
+
+    private static String csvRow(
+            String mode,
+            String target,
+            String match,
+            String file,
+            String line,
+            long elapsedNanos
+    ) {
+        return String.join(
+                ";",
+                escapeCsv(mode),
+                escapeCsv(target),
+                escapeCsv(match),
+                escapeCsv(file),
+                escapeCsv(line),
+                String.format(Locale.ROOT, "%.3f", elapsedNanos / 1_000_000.0)
+        );
+    }
+
+    private static String escapeCsv(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        if (value.contains(";") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+
+        return value;
     }
 }
