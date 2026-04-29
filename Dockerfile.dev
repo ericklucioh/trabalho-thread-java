@@ -1,11 +1,18 @@
-FROM maven:3.9.9-eclipse-temurin-17
+FROM eclipse-temurin:17-jdk
 
 WORKDIR /app
 
-COPY pom.xml .
-RUN mvn -q -DskipTests dependency:go-offline
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        fontconfig \
+        libfreetype6 \
+        libxext6 \
+        libxi6 \
+        libxrender1 \
+        libxtst6 \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY scripts/dev-watch.sh /usr/local/bin/dev-watch.sh
-RUN chmod +x /usr/local/bin/dev-watch.sh
+COPY scripts /usr/local/bin
+RUN chmod +x /usr/local/bin/*.sh
 
 CMD ["/usr/local/bin/dev-watch.sh"]

@@ -3,54 +3,41 @@
 JAR := target/trabalho-thread-java-1.0.0-SNAPSHOT.jar
 DOCKER_COMPOSE := docker compose
 
-.PHONY: help build test package prepare run sync async benchmark clean
+.PHONY: help build test package run dev gui-allow clean
 
 help:
 	@printf '%s\n' \
 		'Targets:' \
-		'  make build              Build the project and run tests in Docker' \
-		'  make test               Run tests only in Docker' \
-		'  make package            Build the jar without tests in Docker' \
-		'  make prepare            Create RESULT_DIR if needed' \
-		'  make run                Run the configured MODE/TARGET in Docker' \
-		'  make sync TYPE=<type> TARGET=<target>             Run the synchronous search for one type' \
-		'  make async TYPE=<type> TARGET=<target>            Run the parallel search for one type' \
-		'  make benchmark          Run sync and async for all TYPES' \
+		'  make build              Compile the project in Docker' \
+		'  make test               Recompile the project in Docker' \
+		'  make package            Build the jar in Docker' \
+		'  make run                Open the Swing interface in Docker' \
+		'  make dev                Open the Swing interface with hot reload' \
+		'  make gui-allow          Allow the local X server to accept Docker windows' \
 		'  make clean              Remove target/' \
 		'' \
 		'Examples:' \
-		'  make sync TYPE=<type> TARGET=<target>' \
-		'  make async TYPE=<type> TARGET=<target>' \
-		'  make benchmark TYPES="<types>" TARGET=<target>'
+		'  make run' \
+		'  make dev' \
+		'  make gui-allow'
 
 build:
-	$(DOCKER_COMPOSE) run --rm --build dev mvn clean verify
+	$(DOCKER_COMPOSE) run --rm --build dev sh -lc 'sh ./scripts/compile.sh'
 
 test:
-	$(DOCKER_COMPOSE) run --rm --build dev mvn test
+	$(DOCKER_COMPOSE) run --rm --build dev sh -lc 'sh ./scripts/compile.sh'
 
 package:
-	$(DOCKER_COMPOSE) run --rm --build dev mvn -q -DskipTests package
+	$(DOCKER_COMPOSE) run --rm --build dev sh -lc 'sh ./scripts/package.sh'
 
-prepare:
-	mkdir -p "$(RESULT_DIR)"
+run: package
+	$(DOCKER_COMPOSE) run --rm --build app
 
-run: prepare package
-	$(DOCKER_COMPOSE) run --rm --build app "$(MODE)" "$(TARGET)"
+dev:
+	$(DOCKER_COMPOSE) up --build dev
 
-sync: prepare package
-	$(DOCKER_COMPOSE) run --rm --build app sync "$(TARGET)"
-
-async: prepare package
-	$(DOCKER_COMPOSE) run --rm --build app parallel "$(TARGET)"
-
-benchmark: prepare package
-	@for type in $(TYPES); do \
-		printf '%s\n' "== sync TYPE=$$type =="; \
-		$(MAKE) --no-print-directory sync TYPE=$$type TARGET="$(TARGET)"; \
-		printf '%s\n' "== async TYPE=$$type =="; \
-		$(MAKE) --no-print-directory async TYPE=$$type TARGET="$(TARGET)"; \
-	done
+gui-allow:
+	xhost +SI:localuser:root
 
 clean:
 	rm -rf target

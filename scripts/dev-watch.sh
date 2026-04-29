@@ -2,34 +2,21 @@
 
 set -eu
 
-: "${MODE:?MODE is required}"
-: "${TARGET:?TARGET is required}"
-: "${POLL_INTERVAL:?POLL_INTERVAL is required}"
-: "${SOURCE_ROOT:?SOURCE_ROOT is required}"
+: "${POLL_INTERVAL:=1}"
+: "${SOURCE_ROOT:=src/main/java}"
 
 snapshot() {
-  {
-    if [ -d "$SOURCE_ROOT" ]; then
-      find "$SOURCE_ROOT" -type f -name '*.java' | sort
-    fi
-
-    if [ -f pom.xml ]; then
-      printf '%s\n' pom.xml
-    fi
-  } | while IFS= read -r file; do
-    [ -f "$file" ] && sha1sum "$file"
-  done | sha1sum | awk '{ print $1 }'
+  find "$SOURCE_ROOT" -type f -name '*.java' | sort | xargs sha1sum | sha1sum | awk '{ print $1 }'
 }
 
 run_app() {
-  mvn -q -DskipTests compile
-  java -cp target/classes thread.App "$MODE" "$TARGET"
+  sh ./scripts/compile.sh
+  java -cp target/classes thread.ui.UiApp
 }
 
 echo "Modo dev ativo"
-echo "MODE=$MODE"
-echo "TARGET=$TARGET"
-echo "Aguardando alteracoes em $SOURCE_ROOT e pom.xml"
+echo "SOURCE_ROOT=$SOURCE_ROOT"
+echo "Aguardando alteracoes em $SOURCE_ROOT"
 
 last_snapshot=""
 
@@ -38,7 +25,7 @@ while :; do
 
   if [ "$current_snapshot" != "$last_snapshot" ]; then
     clear >/dev/null 2>&1 || true
-    echo "Recompilando e executando..."
+    echo "Recompilando e executando interface..."
     run_app
     last_snapshot="$current_snapshot"
   fi

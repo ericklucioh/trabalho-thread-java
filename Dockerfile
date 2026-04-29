@@ -1,13 +1,24 @@
-FROM maven:3.9.9-eclipse-temurin-17 AS build
+FROM eclipse-temurin:17-jdk AS build
+
 WORKDIR /app
 
-COPY pom.xml .
-COPY src ./src
+COPY scripts /app/scripts
+COPY src /app/src
+RUN chmod +x /app/scripts/*.sh && /app/scripts/package.sh
 
-RUN mvn -q -DskipTests package
+FROM eclipse-temurin:17-jdk
 
-FROM eclipse-temurin:17-jre
 WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        fontconfig \
+        libfreetype6 \
+        libxext6 \
+        libxi6 \
+        libxrender1 \
+        libxtst6 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/target/trabalho-thread-java-1.0.0-SNAPSHOT.jar /app/app.jar
 

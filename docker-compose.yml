@@ -5,11 +5,13 @@ services:
     container_name: trabalho-thread-java
     env_file:
       - .env
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
     volumes:
       - ./dataset_g:/app/dataset_g:ro
       - ./dataset_p:/app/dataset_p:ro
       - ./results:/app/results
-    command: ["${MODE}", "${TARGET}"]
+      - /tmp/.X11-unix:/tmp/.X11-unix
 
   dev:
     build:
@@ -19,7 +21,10 @@ services:
     working_dir: /app
     env_file:
       - .env
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
     volumes:
       - .:/app
       - ./results:/app/results
+      - /tmp/.X11-unix:/tmp/.X11-unix
     command: ["/usr/local/bin/dev-watch.sh"]
