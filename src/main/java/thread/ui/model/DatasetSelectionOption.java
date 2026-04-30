@@ -1,8 +1,8 @@
 package thread.ui.model;
 
 public enum DatasetSelectionOption {
-    G("Dataset G", "./dataset_g"),
-    P("Dataset P", "./dataset_p");
+    DATASET_G("dataset_g", "./dataset_g"),
+    DATASET_P("dataset_p", "./dataset_p");
 
     private final String label;
     private final String path;

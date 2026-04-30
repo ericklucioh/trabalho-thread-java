@@ -9,7 +9,9 @@ public record SearchResultViewModel(
         int lineNumber,
         String elapsedText,
         String message,
-        ExecutionModeOption executionMode,
-        SearchStrategyOption searchStrategy
+        SearchStrategyOption searchStrategy,
+        SearchStorageOption searchStorage,
+        int threads,
+        boolean specialMode
 ) {
 }

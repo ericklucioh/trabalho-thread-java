@@ -1,10 +1,10 @@
 package thread.ui.controller;
 
-import thread.ui.model.ExecutionModeOption;
 import thread.ui.model.DatasetSelectionOption;
 import thread.ui.model.SearchHistoryEntry;
 import thread.ui.model.SearchRequest;
 import thread.ui.model.SearchResultViewModel;
+import thread.ui.model.SearchStorageOption;
 import thread.ui.model.SearchStrategyOption;
 
 import java.util.List;
@@ -14,9 +14,9 @@ public interface SearchScreenController {
 
     List<DatasetSelectionOption> datasetSelections();
 
-    List<ExecutionModeOption> executionModes();
-
     List<SearchStrategyOption> searchStrategies();
+
+    List<SearchStorageOption> searchStorageOptions();
 
     SearchResultViewModel search(SearchRequest request);
 

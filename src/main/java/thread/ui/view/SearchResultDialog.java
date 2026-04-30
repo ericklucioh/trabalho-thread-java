@@ -46,7 +46,7 @@ public final class SearchResultDialog extends JDialog {
         grid.add(new JLabel(result.message()));
         grid.add(new JLabel("Nome buscado:"));
         grid.add(new JLabel(defaultText(result.targetName())));
-        grid.add(new JLabel("Datasets:"));
+        grid.add(new JLabel("Dataset:"));
         grid.add(new JLabel(defaultText(result.datasetsText())));
         grid.add(new JLabel("Nome retornado:"));
         grid.add(new JLabel(defaultText(result.matchedName())));
@@ -56,10 +56,14 @@ public final class SearchResultDialog extends JDialog {
         grid.add(new JLabel(result.lineNumber() <= 0 ? "-" : Integer.toString(result.lineNumber())));
         grid.add(new JLabel("Tempo:"));
         grid.add(new JLabel(defaultText(result.elapsedText())));
-        grid.add(new JLabel("Forma de execucao:"));
-        grid.add(new JLabel(result.executionMode().label()));
         grid.add(new JLabel("Estrategia:"));
         grid.add(new JLabel(result.searchStrategy().label()));
+        grid.add(new JLabel("Storage:"));
+        grid.add(new JLabel(result.searchStorage().label()));
+        grid.add(new JLabel("Threads:"));
+        grid.add(new JLabel(Integer.toString(result.threads())));
+        grid.add(new JLabel("is_special_mode:"));
+        grid.add(new JLabel(Boolean.toString(result.specialMode())));
 
         JPanel center = new JPanel(new BorderLayout(0, 12));
         center.setOpaque(false);

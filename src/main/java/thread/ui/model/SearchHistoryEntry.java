@@ -7,8 +7,10 @@ public record SearchHistoryEntry(
         String fileName,
         int lineNumber,
         String elapsedText,
-        ExecutionModeOption executionMode,
         SearchStrategyOption searchStrategy,
+        SearchStorageOption searchStorage,
+        int threads,
+        boolean specialMode,
         String status
 ) {
 }

@@ -1,13 +1,13 @@
 package thread.ui.model;
 
-public enum SearchStrategyOption {
-    LINE_BY_LINE("line by line"),
-    CHAR_BY_CHAR("char by char"),
-    REGEX("regex");
+public enum SearchStorageOption {
+    IN_FILE("in_file"),
+    IN_MEMORY_LIST_OF_FILES_OF_LINE("in_memory_list_of_files_of_line"),
+    IN_MEMORY_LIST_OF_FILES("in_memory_list_of_files");
 
     private final String label;
 
-    SearchStrategyOption(String label) {
+    SearchStorageOption(String label) {
         this.label = label;
     }
 

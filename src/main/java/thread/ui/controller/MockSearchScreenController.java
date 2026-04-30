@@ -1,10 +1,10 @@
 package thread.ui.controller;
 
-import thread.ui.model.ExecutionModeOption;
 import thread.ui.model.DatasetSelectionOption;
 import thread.ui.model.SearchHistoryEntry;
 import thread.ui.model.SearchRequest;
 import thread.ui.model.SearchResultViewModel;
+import thread.ui.model.SearchStorageOption;
 import thread.ui.model.SearchStrategyOption;
 
 import java.util.ArrayList;
@@ -44,35 +44,41 @@ public final class MockSearchScreenController implements SearchScreenController 
     public MockSearchScreenController() {
         history.add(new SearchHistoryEntry(
                 "Ana",
-                "Dataset G",
+                "dataset_g",
                 "Ana",
                 "dataset_g/a1.txt",
                 4,
                 "12.4 ms",
-                ExecutionModeOption.SEQUENTIAL,
                 SearchStrategyOption.LINE_BY_LINE,
+                SearchStorageOption.IN_FILE,
+                1,
+                false,
                 "Encontrado"
         ));
         history.add(new SearchHistoryEntry(
                 "Rafael",
-                "Dataset P",
+                "dataset_p",
                 "Rafael",
                 "dataset_p/arq_3.txt",
                 18,
                 "9.8 ms",
-                ExecutionModeOption.PARALLEL,
-                SearchStrategyOption.IN_MEMORY,
+                SearchStrategyOption.CHAR_BY_CHAR,
+                SearchStorageOption.IN_MEMORY_LIST_OF_FILES_OF_LINE,
+                12,
+                false,
                 "Encontrado"
         ));
         history.add(new SearchHistoryEntry(
                 "Xavier",
-                "Dataset G, Dataset P",
+                "dataset_g, dataset_p",
                 "-",
                 "-",
                 0,
                 "14.1 ms",
-                ExecutionModeOption.SEQUENTIAL,
                 SearchStrategyOption.REGEX,
+                SearchStorageOption.IN_MEMORY_LIST_OF_FILES,
+                1,
+                true,
                 "Nao encontrado"
         ));
     }
@@ -88,13 +94,13 @@ public final class MockSearchScreenController implements SearchScreenController 
     }
 
     @Override
-    public List<ExecutionModeOption> executionModes() {
-        return List.of(ExecutionModeOption.values());
+    public List<SearchStrategyOption> searchStrategies() {
+        return List.of(SearchStrategyOption.values());
     }
 
     @Override
-    public List<SearchStrategyOption> searchStrategies() {
-        return List.of(SearchStrategyOption.values());
+    public List<SearchStorageOption> searchStorageOptions() {
+        return List.of(SearchStorageOption.values());
     }
 
     @Override
@@ -112,8 +118,10 @@ public final class MockSearchScreenController implements SearchScreenController 
                     0,
                     buildElapsedText(runCounter.incrementAndGet()),
                     "Informe um nome para simular a busca.",
-                    request.executionMode(),
-                    request.searchStrategy()
+                    request.searchStrategy(),
+                    request.searchStorage(),
+                    request.threads(),
+                    request.specialMode()
             );
             addHistory(result, request, "Nao encontrado");
             return result;
@@ -138,8 +146,10 @@ public final class MockSearchScreenController implements SearchScreenController 
                 lineNumber,
                 elapsedText,
                 message,
-                request.executionMode(),
-                request.searchStrategy()
+                request.searchStrategy(),
+                request.searchStorage(),
+                request.threads(),
+                request.specialMode()
         );
         addHistory(result, request, found ? "Encontrado" : "Nao encontrado");
         return result;
@@ -158,8 +168,10 @@ public final class MockSearchScreenController implements SearchScreenController 
                 result.fileName().isBlank() ? "-" : result.fileName(),
                 result.lineNumber(),
                 result.elapsedText(),
-                request.executionMode(),
                 request.searchStrategy(),
+                request.searchStorage(),
+                request.threads(),
+                request.specialMode(),
                 status
         ));
     }
@@ -181,13 +193,13 @@ public final class MockSearchScreenController implements SearchScreenController 
     private String datasetsText(SearchRequest request) {
         List<DatasetSelectionOption> datasets = request.datasets();
         if (datasets == null || datasets.isEmpty()) {
-            return "Nenhum dataset selecionado";
+            return "nenhum dataset";
         }
 
         return datasets.stream()
                 .map(DatasetSelectionOption::label)
                 .reduce((left, right) -> left + ", " + right)
-                .orElse("Nenhum dataset selecionado");
+                .orElse("nenhum dataset");
     }
 
     private String normalize(String text) {

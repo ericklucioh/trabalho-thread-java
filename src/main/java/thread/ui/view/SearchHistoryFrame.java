@@ -38,7 +38,7 @@ public final class SearchHistoryFrame extends JFrame {
         ));
 
         tableModel = new DefaultTableModel(
-                new Object[]{"Nome", "Datasets", "Resultado", "Arquivo", "Linha", "Tempo", "Execucao", "Estrategia", "Status"},
+                new Object[]{"Nome", "Dataset", "Resultado", "Arquivo", "Linha", "Tempo", "Estrategia", "Storage", "Threads", "is_special_mode", "Status"},
                 0
         ) {
             @Override
@@ -68,8 +68,10 @@ public final class SearchHistoryFrame extends JFrame {
                     value(entry.fileName()),
                     entry.lineNumber() <= 0 ? "-" : Integer.toString(entry.lineNumber()),
                     value(entry.elapsedText()),
-                    entry.executionMode().label(),
                     entry.searchStrategy().label(),
+                    entry.searchStorage().label(),
+                    Integer.toString(entry.threads()),
+                    Boolean.toString(entry.specialMode()),
                     value(entry.status())
             });
         }
