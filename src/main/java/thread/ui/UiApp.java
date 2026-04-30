@@ -1,6 +1,6 @@
 package thread.ui;
 
-import thread.ui.controller.MockSearchScreenController;
+import thread.ui.controller.RealSearchScreenController;
 import thread.ui.view.SearchScreenFrame;
 
 import javax.swing.SwingUtilities;
@@ -24,7 +24,7 @@ public final class UiApp {
         configureDefaultFont();
 
         SwingUtilities.invokeLater(() -> {
-            SearchScreenFrame frame = new SearchScreenFrame(new MockSearchScreenController());
+            SearchScreenFrame frame = new SearchScreenFrame(new RealSearchScreenController());
             frame.setVisible(true);
         });
     }

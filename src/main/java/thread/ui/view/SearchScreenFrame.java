@@ -134,7 +134,7 @@ public final class SearchScreenFrame extends JFrame {
         JPanel content = new JPanel(new BorderLayout(12, 12));
         content.setOpaque(false);
 
-        JPanel optionsGrid = new JPanel(new GridLayout(3, 2, 12, 12));
+        JPanel optionsGrid = new JPanel(new GridLayout(0, 2, 12, 12));
         optionsGrid.setOpaque(false);
         optionsGrid.add(buildDatasetPanel());
         optionsGrid.add(buildStrategyPanel());
@@ -221,7 +221,7 @@ public final class SearchScreenFrame extends JFrame {
     private JPanel buildFooter() {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         footer.setOpaque(false);
-        footer.add(new JLabel("Interface desacoplada do motor real de busca"));
+        footer.add(new JLabel("Interface conectada ao motor real de busca"));
         return footer;
     }
 

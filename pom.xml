@@ -37,7 +37,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>thread.App</mainClass>
+              <mainClass>thread.ui.UiApp</mainClass>
             </manifest>
           </archive>
         </configuration>

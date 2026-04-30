@@ -9,6 +9,6 @@ public final class RegexFinder implements Finder {
             return false;
         }
 
-        return Pattern.compile(Pattern.quote(target)).matcher(text).find();
+        return Pattern.compile(target).matcher(text).find();
     }
 }
