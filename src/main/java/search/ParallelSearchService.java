@@ -1,7 +1,9 @@
 package thread.search;
 
 import thread.search.core.SearchEngine;
+import thread.search.core.SearchChunk;
 import thread.search.storage.DirectFileSearchStorage;
+import thread.search.threading.DivisoraDeArquivosParaThreads;
 import thread.search.strategy.LineByLineSearchStrategy;
 
 import java.io.IOException;
@@ -30,13 +32,22 @@ public final class ParallelSearchService implements SearchService {
             collectFiles(directory, files);
         }
 
-        ExecutorService executor = Executors.newFixedThreadPool(
-                Math.max(1, Runtime.getRuntime().availableProcessors())
+        List<SearchChunk> chunks = DivisoraDeArquivosParaThreads.dividir(
+                files,
+                Runtime.getRuntime().availableProcessors(),
+                new DirectFileSearchStorage()
         );
 
+        if (chunks.isEmpty()) {
+            return List.of();
+        }
+
+        int workerCount = Math.max(1, Math.min(Runtime.getRuntime().availableProcessors(), chunks.size()));
+        ExecutorService executor = Executors.newFixedThreadPool(workerCount);
+
         try {
-            List<Callable<List<SearchResult>>> tasks = files.stream()
-                    .map(file -> (Callable<List<SearchResult>>) () -> scanFile(file, target))
+            List<Callable<List<SearchResult>>> tasks = chunks.stream()
+                    .map(chunk -> (Callable<List<SearchResult>>) () -> scanChunk(chunk, target))
                     .toList();
 
             List<Future<List<SearchResult>>> futures = executor.invokeAll(tasks);
@@ -73,7 +84,7 @@ public final class ParallelSearchService implements SearchService {
         }
     }
 
-    private List<SearchResult> scanFile(Path file, String target) {
-        return engine.search(file, target);
+    private List<SearchResult> scanChunk(SearchChunk chunk, String target) {
+        return engine.search(chunk, target);
     }
 }

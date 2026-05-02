@@ -19,9 +19,17 @@ public final class SearchEngine {
     public List<SearchResult> search(Path path, String target) {
         try {
             SearchFile file = storage.open(path);
-            return strategy.search(file, target);
+            return search(file, target);
         } catch (IOException exception) {
             throw new IllegalStateException("Falha ao preparar arquivo: " + path, exception);
+        }
+    }
+
+    public List<SearchResult> search(SearchFile file, String target) {
+        try {
+            return strategy.search(file, target);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Falha ao processar arquivo: " + file.path(), exception);
         }
     }
 }

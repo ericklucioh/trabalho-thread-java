@@ -2,11 +2,13 @@ package thread.ui.controller;
 
 import thread.search.SearchResult;
 import thread.search.core.SearchEngine;
+import thread.search.core.SearchChunk;
 import thread.search.core.SearchStrategy;
 import thread.search.core.SearchStorage;
 import thread.search.storage.DirectFileSearchStorage;
 import thread.search.storage.InMemoryLinesSearchStorage;
 import thread.search.storage.InMemoryTextSearchStorage;
+import thread.search.threading.DivisoraDeArquivosParaThreads;
 import thread.search.strategy.CharByCharSearchStrategy;
 import thread.search.strategy.LineByLineSearchStrategy;
 import thread.search.strategy.RegexSearchStrategy;
@@ -166,10 +168,16 @@ public final class RealSearchScreenController implements SearchScreenController 
         }
 
         long startedAt = System.nanoTime();
-        SearchEngine engine = engineFor(request.searchStorage(), request.searchStrategy());
+        SearchStorage storage = storageFor(request.searchStorage());
+        SearchEngine engine = engineFor(storage, request.searchStrategy());
         List<Path> files = collectFiles(selectedRoots);
-        List<SearchResult> matches = searchFiles(
+        List<SearchChunk> chunks = DivisoraDeArquivosParaThreads.dividir(
                 files,
+                request.threads(),
+                storage
+        );
+        List<SearchResult> matches = searchChunks(
+                chunks,
                 target,
                 engine,
                 request.threads(),
@@ -230,22 +238,22 @@ public final class RealSearchScreenController implements SearchScreenController 
         return result;
     }
 
-    private List<SearchResult> searchFiles(
-            List<Path> files,
+    private List<SearchResult> searchChunks(
+            List<SearchChunk> chunks,
             String target,
             SearchEngine engine,
             int threads,
             boolean specialMode
     ) {
-        if (files.isEmpty()) {
+        if (chunks.isEmpty()) {
             return List.of();
         }
 
-        int workerCount = Math.max(1, Math.min(threads, files.size()));
+        int workerCount = Math.max(1, Math.min(threads, chunks.size()));
         if (workerCount == 1) {
             List<SearchResult> results = new ArrayList<>();
-            for (Path file : files) {
-                results.addAll(scanFile(file, target, engine));
+            for (SearchChunk chunk : chunks) {
+                results.addAll(scanChunk(chunk, target, engine));
                 if (!specialMode && !results.isEmpty()) {
                     break;
                 }
@@ -255,8 +263,8 @@ public final class RealSearchScreenController implements SearchScreenController 
 
         ExecutorService executor = Executors.newFixedThreadPool(workerCount);
         try {
-            List<Callable<List<SearchResult>>> tasks = files.stream()
-                    .map(file -> (Callable<List<SearchResult>>) () -> scanFile(file, target, engine))
+            List<Callable<List<SearchResult>>> tasks = chunks.stream()
+                    .map(chunk -> (Callable<List<SearchResult>>) () -> scanChunk(chunk, target, engine))
                     .toList();
 
             List<Future<List<SearchResult>>> futures = executor.invokeAll(tasks);
@@ -275,12 +283,12 @@ public final class RealSearchScreenController implements SearchScreenController 
         }
     }
 
-    private List<SearchResult> scanFile(
-            Path file,
+    private List<SearchResult> scanChunk(
+            SearchChunk chunk,
             String target,
             SearchEngine engine
     ) {
-        return engine.search(file, target);
+        return engine.search(chunk, target);
     }
 
     private List<Path> collectFiles(List<Path> roots) {
@@ -340,8 +348,7 @@ public final class RealSearchScreenController implements SearchScreenController 
         java.util.regex.Pattern.compile(target);
     }
 
-    private SearchEngine engineFor(SearchStorageOption storageOption, SearchStrategyOption strategyOption) {
-        SearchStorage storage = storageFor(storageOption);
+    private SearchEngine engineFor(SearchStorage storage, SearchStrategyOption strategyOption) {
         SearchStrategy strategy = strategyFor(strategyOption);
         return new SearchEngine(storage, strategy);
     }
