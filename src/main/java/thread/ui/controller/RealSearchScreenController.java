@@ -1,10 +1,15 @@
 package thread.ui.controller;
 
-import model.CharByCharFinder;
-import model.Finder;
-import model.LineByLineFinder;
-import model.RegexFinder;
 import thread.search.SearchResult;
+import thread.search.core.SearchEngine;
+import thread.search.core.SearchStrategy;
+import thread.search.core.SearchStorage;
+import thread.search.storage.DirectFileSearchStorage;
+import thread.search.storage.InMemoryLinesSearchStorage;
+import thread.search.storage.InMemoryTextSearchStorage;
+import thread.search.strategy.CharByCharSearchStrategy;
+import thread.search.strategy.LineByLineSearchStrategy;
+import thread.search.strategy.RegexSearchStrategy;
 import thread.ui.model.DatasetSelectionOption;
 import thread.ui.model.SearchHistoryEntry;
 import thread.ui.model.SearchRequest;
@@ -13,14 +18,12 @@ import thread.ui.model.SearchStorageOption;
 import thread.ui.model.SearchStrategyOption;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
-import java.util.LinkedHashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -163,13 +166,12 @@ public final class RealSearchScreenController implements SearchScreenController 
         }
 
         long startedAt = System.nanoTime();
-        Finder finder = finderFor(request.searchStrategy());
+        SearchEngine engine = engineFor(request.searchStorage(), request.searchStrategy());
         List<Path> files = collectFiles(selectedRoots);
         List<SearchResult> matches = searchFiles(
                 files,
                 target,
-                finder,
-                request.searchStorage(),
+                engine,
                 request.threads(),
                 request.specialMode()
         );
@@ -228,23 +230,10 @@ public final class RealSearchScreenController implements SearchScreenController 
         return result;
     }
 
-    private Finder finderFor(SearchStrategyOption option) {
-        if (option == null) {
-            return new LineByLineFinder();
-        }
-
-        return switch (option) {
-            case LINE_BY_LINE -> new LineByLineFinder();
-            case CHAR_BY_CHAR -> new CharByCharFinder();
-            case REGEX -> new RegexFinder();
-        };
-    }
-
     private List<SearchResult> searchFiles(
             List<Path> files,
             String target,
-            Finder finder,
-            SearchStorageOption storage,
+            SearchEngine engine,
             int threads,
             boolean specialMode
     ) {
@@ -256,7 +245,7 @@ public final class RealSearchScreenController implements SearchScreenController 
         if (workerCount == 1) {
             List<SearchResult> results = new ArrayList<>();
             for (Path file : files) {
-                results.addAll(scanFile(file, target, finder, storage));
+                results.addAll(scanFile(file, target, engine));
                 if (!specialMode && !results.isEmpty()) {
                     break;
                 }
@@ -267,7 +256,7 @@ public final class RealSearchScreenController implements SearchScreenController 
         ExecutorService executor = Executors.newFixedThreadPool(workerCount);
         try {
             List<Callable<List<SearchResult>>> tasks = files.stream()
-                    .map(file -> (Callable<List<SearchResult>>) () -> scanFile(file, target, finder, storage))
+                    .map(file -> (Callable<List<SearchResult>>) () -> scanFile(file, target, engine))
                     .toList();
 
             List<Future<List<SearchResult>>> futures = executor.invokeAll(tasks);
@@ -289,67 +278,13 @@ public final class RealSearchScreenController implements SearchScreenController 
     private List<SearchResult> scanFile(
             Path file,
             String target,
-            Finder finder,
-            SearchStorageOption storage
+            SearchEngine engine
     ) {
-        return switch (storage == null ? SearchStorageOption.IN_FILE : storage) {
-            case IN_FILE -> scanFileFromDisk(file, target, finder);
-            case IN_MEMORY_LIST_OF_FILES_OF_LINE -> scanFileFromLinesInMemory(file, target, finder);
-            case IN_MEMORY_LIST_OF_FILES -> scanFileFromWholeFileInMemory(file, target, finder);
-        };
-    }
-
-    private List<SearchResult> scanFileFromDisk(Path file, String target, Finder finder) {
-        List<SearchResult> results = new ArrayList<>();
-        try (Stream<String> lines = Files.lines(file, StandardCharsets.UTF_8)) {
-            final long[] lineNumber = {0};
-            lines.forEach(line -> {
-                lineNumber[0]++;
-                if (finder.matches(line, target)) {
-                    results.add(new SearchResult(line, file, lineNumber[0]));
-                }
-            });
-            return results;
-        } catch (IOException exception) {
-            throw new IllegalStateException("Falha ao ler arquivo: " + file, exception);
-        }
-    }
-
-    private List<SearchResult> scanFileFromLinesInMemory(Path file, String target, Finder finder) {
-        try {
-            List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
-            List<SearchResult> results = new ArrayList<>();
-            for (int i = 0; i < lines.size(); i++) {
-                String line = lines.get(i);
-                if (finder.matches(line, target)) {
-                    results.add(new SearchResult(line, file, i + 1));
-                }
-            }
-            return results;
-        } catch (IOException exception) {
-            throw new IllegalStateException("Falha ao ler arquivo: " + file, exception);
-        }
-    }
-
-    private List<SearchResult> scanFileFromWholeFileInMemory(Path file, String target, Finder finder) {
-        try {
-            String content = Files.readString(file, StandardCharsets.UTF_8);
-            String[] lines = content.split("\\R", -1);
-            List<SearchResult> results = new ArrayList<>();
-            for (int i = 0; i < lines.length; i++) {
-                String line = lines[i];
-                if (finder.matches(line, target)) {
-                    results.add(new SearchResult(line, file, i + 1));
-                }
-            }
-            return results;
-        } catch (IOException exception) {
-            throw new IllegalStateException("Falha ao ler arquivo: " + file, exception);
-        }
+        return engine.search(file, target);
     }
 
     private List<Path> collectFiles(List<Path> roots) {
-        Set<Path> files = new LinkedHashSet<>();
+        Set<Path> files = new java.util.LinkedHashSet<>();
         for (Path root : roots) {
             if (!Files.exists(root)) {
                 throw new IllegalArgumentException("Diretorio nao encontrado: " + root);
@@ -403,6 +338,36 @@ public final class RealSearchScreenController implements SearchScreenController 
 
     private void validateRegex(String target) {
         java.util.regex.Pattern.compile(target);
+    }
+
+    private SearchEngine engineFor(SearchStorageOption storageOption, SearchStrategyOption strategyOption) {
+        SearchStorage storage = storageFor(storageOption);
+        SearchStrategy strategy = strategyFor(strategyOption);
+        return new SearchEngine(storage, strategy);
+    }
+
+    private SearchStorage storageFor(SearchStorageOption option) {
+        if (option == null) {
+            return new DirectFileSearchStorage();
+        }
+
+        return switch (option) {
+            case IN_FILE -> new DirectFileSearchStorage();
+            case IN_MEMORY_LIST_OF_FILES_OF_LINE -> new InMemoryLinesSearchStorage();
+            case IN_MEMORY_LIST_OF_FILES -> new InMemoryTextSearchStorage();
+        };
+    }
+
+    private SearchStrategy strategyFor(SearchStrategyOption option) {
+        if (option == null) {
+            return new LineByLineSearchStrategy();
+        }
+
+        return switch (option) {
+            case LINE_BY_LINE -> new LineByLineSearchStrategy();
+            case CHAR_BY_CHAR -> new CharByCharSearchStrategy();
+            case REGEX -> new RegexSearchStrategy();
+        };
     }
 
     private String formatElapsed(long elapsedNanos) {

@@ -1,7 +1,10 @@
 package thread.search;
 
+import thread.search.core.SearchEngine;
+import thread.search.storage.DirectFileSearchStorage;
+import thread.search.strategy.LineByLineSearchStrategy;
+
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -9,6 +12,10 @@ import java.util.Comparator;
 import java.util.List;
 
 public final class SequentialSearchService implements SearchService {
+    private final SearchEngine engine = new SearchEngine(
+            new DirectFileSearchStorage(),
+            new LineByLineSearchStrategy()
+    );
 
     @Override
     public List<SearchResult> search(List<Path> datasetDirectories, String target) {
@@ -38,16 +45,6 @@ public final class SequentialSearchService implements SearchService {
     }
 
     private void scanFile(Path file, String target, List<SearchResult> results) {
-        try {
-            List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
-            for (int i = 0; i < lines.size(); i++) {
-                String line = lines.get(i);
-                if (line.contains(target)) {
-                    results.add(new SearchResult(line, file, i + 1));
-                }
-            }
-        } catch (IOException exception) {
-            throw new IllegalStateException("Falha ao ler arquivo: " + file, exception);
-        }
+        results.addAll(engine.search(file, target));
     }
 }

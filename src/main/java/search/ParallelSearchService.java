@@ -1,7 +1,10 @@
 package thread.search;
 
+import thread.search.core.SearchEngine;
+import thread.search.storage.DirectFileSearchStorage;
+import thread.search.strategy.LineByLineSearchStrategy;
+
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,6 +17,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public final class ParallelSearchService implements SearchService {
+    private final SearchEngine engine = new SearchEngine(
+            new DirectFileSearchStorage(),
+            new LineByLineSearchStrategy()
+    );
 
     @Override
     public List<SearchResult> search(List<Path> datasetDirectories, String target) {
@@ -66,17 +73,7 @@ public final class ParallelSearchService implements SearchService {
         }
     }
 
-    private List<SearchResult> scanFile(Path file, String target) throws IOException {
-        List<SearchResult> results = new ArrayList<>();
-        List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
-
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            if (line.contains(target)) {
-                results.add(new SearchResult(line, file, i + 1));
-            }
-        }
-
-        return results;
+    private List<SearchResult> scanFile(Path file, String target) {
+        return engine.search(file, target);
     }
 }
