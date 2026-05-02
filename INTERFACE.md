@@ -2,12 +2,13 @@
 
 ## Objetivo
 
-Criar uma interface simples em Java puro, com sintaxe padrão e sem frameworks pesados, para executar buscas no conjunto de arquivos `.txt` do projeto sem depender de formulários técnicos ou variáveis de ambiente para o uso diário.
+Criar uma interface simples em Java puro para executar buscas no conjunto de arquivos `.txt` do projeto sem depender de CLI ou configuração manual espalhada.
 
 A tela deve permitir:
 
 - digitar um nome para buscar
-- escolher uma forma de execução
+- escolher a quantidade de threads
+- escolher um ou mais datasets
 - escolher uma estratégia de busca
 - ver o resultado da busca imediatamente
 - consultar o histórico de execuções em formato visual
@@ -39,9 +40,10 @@ Os dois terços restantes da página devem concentrar as configurações da busc
 
 Essa área deve permitir selecionar de forma clara:
 
-- forma de execução, como sequencial ou paralela
-- estratégia de busca, como leitura direta, busca em memória, regex ou comparação por caractere
-- demais variações que já façam parte do projeto
+- datasets ativos
+- quantidade de threads
+- estratégia de busca
+- forma de armazenamento/leitura
 
 O texto exibido na interface deve ser objetivo e descritivo, sem siglas soltas.
 
@@ -64,7 +66,7 @@ Se houver mais de uma ocorrência, o sistema pode listar todas no mesmo retorno 
 
 ## Histórico de resultados
 
-Ao acionar a visualização de resultados, a interface deve carregar o CSV já gerado nas execuções anteriores.
+Ao acionar a visualização de resultados, a interface deve carregar o histórico salvo pelas execuções anteriores.
 
 A apresentação deve ser visual, em formato de tabela, com foco em leitura rápida e comparação entre execuções.
 
@@ -72,7 +74,8 @@ O histórico deve permitir observar:
 
 - nome buscado
 - estratégia usada
-- forma de execução
+- quantidade de threads
+- modo de armazenamento
 - arquivo encontrado
 - linha encontrada
 - tempo gasto
@@ -90,11 +93,10 @@ Com essa interface pronta, a aplicação deve reduzir a dependência de configur
 
 O objetivo é manter apenas fluxos simples de uso:
 
-- build
-- run
-- hot reload no modo de desenvolvimento
-
-Os parâmetros de busca devem ser escolhidos na interface, não por um conjunto confuso de variáveis soltas.
+- abrir a interface
+- escolher parâmetros na própria tela
+- executar a busca
+- consultar histórico
 
 ## Resultado esperado
 
@@ -102,5 +104,5 @@ Essa interface deve servir como ponto único de uso do projeto:
 
 - para executar buscas manuais
 - para comparar estratégias
-- para consultar histórico
+- para explorar paralelismo por threads
 - para apoiar a análise final do trabalho

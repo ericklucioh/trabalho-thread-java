@@ -1,42 +1,49 @@
 # Trabalho Thread Java
 
-Setup inicial do trabalho em Java com Docker e Docker Compose.
+Aplicação em Java com interface Swing para buscar nomes em arquivos `.txt` dos datasets do trabalho.
 
-## Estrutura
+## Estado atual
 
-- `dataset_g/` e `dataset_p/`: datasets fornecidos no enunciado
-- `src/main/java/`: implementação da busca
-- `Dockerfile`: imagem da aplicação
-- `docker-compose.yml`: execução com os datasets montados como volume somente leitura
+- a interface Swing é a entrada principal
+- o caminho CLI foi removido
+- a busca suporta:
+  - `line_by_line`
+  - `char_by_char`
+  - `regex`
+- a execução suporta:
+  - leitura direta do arquivo
+  - memória por lista de linhas
+  - memória por texto inteiro
+- o paralelismo divide o trabalho em blocos de linhas
 
-## Executar a interface com Docker Compose
+## Estrutura do projeto
 
-Antes de abrir a janela pela primeira vez, permita o acesso do container ao seu servidor X:
+- `dataset_g/` e `dataset_p/`: datasets do trabalho
+- `src/main/java/thread/ui/`: UI Swing, controller e view
+- `src/main/java/thread/search/`: motor de busca, estratégias e particionamento
+- `Dockerfile` e `docker-compose.yml`: execução em container
 
-```bash
-make gui-allow
-```
-
-Se o comando `xhost` não existir no host, instale a ferramenta equivalente do seu sistema.
+## Como executar
 
 ```bash
 docker compose up --build
 ```
 
-O container `app` abre a interface Swing diretamente.
+Isso abre a interface Swing.
 
-## Modo dev com recarga
-
-Para recompilar e rerodar automaticamente quando `src/main/java` mudar:
+## Modo de desenvolvimento
 
 ```bash
 docker compose up --build dev
 ```
 
-O modo de desenvolvimento recompila com `javac` dentro do container e reabre a interface Swing.
+O container de desenvolvimento recompila a aplicação dentro do ambiente do projeto.
 
-## Executar a interface no container
+## Validação
+
+Os scripts do projeto compilam e empacotam dentro do container:
 
 ```bash
-docker compose run --rm --build app
+sh ./scripts/compile.sh
+sh ./scripts/package.sh
 ```
