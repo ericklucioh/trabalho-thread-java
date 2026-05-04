@@ -7,7 +7,9 @@ import thread.search.core.SearchStorage;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public final class DivisoraDeArquivosParaThreads {
@@ -15,8 +17,18 @@ public final class DivisoraDeArquivosParaThreads {
     }
 
     public static List<SearchChunk> dividir(List<Path> arquivos, int threads, SearchStorage storage) {
+        return dividir(arquivos, threads, storage, Collections.emptyMap());
+    }
+
+    public static List<SearchChunk> dividir(
+            List<Path> arquivos,
+            int threads,
+            SearchStorage storage,
+            Map<Path, Long> lineCounts
+    ) {
         Objects.requireNonNull(arquivos, "arquivos");
         Objects.requireNonNull(storage, "storage");
+        Objects.requireNonNull(lineCounts, "lineCounts");
 
         if (arquivos.isEmpty()) {
             return List.of();
@@ -27,7 +39,7 @@ public final class DivisoraDeArquivosParaThreads {
 
         for (Path arquivo : arquivos) {
             SearchFile file = open(storage, arquivo);
-            long lineCount = countLines(file);
+            long lineCount = lineCountFor(arquivo, file, lineCounts);
             profiles.add(new FileProfile(arquivo, file));
             totalLines += lineCount;
         }
@@ -55,7 +67,12 @@ public final class DivisoraDeArquivosParaThreads {
         }
     }
 
-    private static long countLines(SearchFile file) {
+    private static long lineCountFor(Path arquivo, SearchFile file, Map<Path, Long> lineCounts) {
+        Long lineCount = lineCounts.get(arquivo);
+        if (lineCount != null) {
+            return lineCount;
+        }
+
         long[] count = {0};
         try {
             file.forEachLine((line, lineNumber) -> count[0]++);

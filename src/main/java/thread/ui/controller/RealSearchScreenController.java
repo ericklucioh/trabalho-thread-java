@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -40,27 +41,16 @@ import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
 
 public final class RealSearchScreenController implements SearchScreenController {
+    private static final long DATASET_G_LINE_COUNT = 10_000L;
+    private static final long DATASET_P_LINE_COUNT = 1_000L;
     private static final List<String> SAMPLE_NAMES = List.of(
-            "Ana",
-            "Bruno",
-            "Carlos",
-            "Daniela",
-            "Eduardo",
-            "Fernanda",
-            "Gabriel",
-            "Helena",
-            "Igor",
-            "Juliana",
-            "Kaique",
-            "Larissa",
-            "Marcos",
-            "Nathalia",
-            "Otavio",
-            "Patricia",
-            "Rafael",
-            "Sabrina",
-            "Thiago",
-            "Vanessa"
+            "Sharon Sullivan",
+            "Tracy Bass",
+            "Charles Holloway",
+            "Carolyn Hale",
+            "Danielle Hall",
+            "Stacy Porter",
+            "Penny Black"
     );
 
     private final Map<DatasetSelectionOption, Path> datasetRoots;
@@ -171,18 +161,20 @@ public final class RealSearchScreenController implements SearchScreenController 
         SearchStorage storage = storageFor(request.searchStorage());
         SearchEngine engine = engineFor(storage, request.searchStrategy());
         List<Path> files = collectFiles(selectedRoots);
-        List<SearchChunk> chunks = DivisoraDeArquivosParaThreads.dividir(
-                files,
-                request.threads(),
-                storage
-        );
-        List<SearchResult> matches = searchChunks(
-                chunks,
-                target,
-                engine,
-                request.threads(),
-                request.specialMode()
-        );
+        List<SearchResult> matches = request.threads() <= 1 && !request.specialMode()
+                ? searchSequentially(files, target, engine)
+                : searchChunks(
+                        DivisoraDeArquivosParaThreads.dividir(
+                                files,
+                                request.threads(),
+                                storage,
+                                knownLineCounts(request.datasets(), files)
+                        ),
+                        target,
+                        engine,
+                        request.threads(),
+                        request.specialMode()
+                );
         long elapsedNanos = System.nanoTime() - startedAt;
 
         matches.sort(Comparator
@@ -283,6 +275,21 @@ public final class RealSearchScreenController implements SearchScreenController 
         }
     }
 
+    private List<SearchResult> searchSequentially(
+            List<Path> files,
+            String target,
+            SearchEngine engine
+    ) {
+        List<SearchResult> results = new ArrayList<>();
+        for (Path file : files) {
+            results.addAll(engine.search(file, target));
+            if (!results.isEmpty()) {
+                break;
+            }
+        }
+        return results;
+    }
+
     private List<SearchResult> scanChunk(
             SearchChunk chunk,
             String target,
@@ -331,6 +338,30 @@ public final class RealSearchScreenController implements SearchScreenController 
             mappedRoots.put(options[i], roots.get(i));
         }
         return Collections.unmodifiableMap(mappedRoots);
+    }
+
+    private Map<Path, Long> knownLineCounts(List<DatasetSelectionOption> datasets, List<Path> files) {
+        Map<Path, Long> counts = new LinkedHashMap<>();
+        for (Path file : files) {
+            counts.put(file, knownLineCount(datasets, file));
+        }
+        return counts;
+    }
+
+    private long knownLineCount(List<DatasetSelectionOption> datasets, Path file) {
+        if (datasets != null) {
+            for (DatasetSelectionOption option : datasets) {
+                Path root = datasetRoots.getOrDefault(option, Path.of(option.path()));
+                if (file.startsWith(root)) {
+                    return switch (option) {
+                        case DATASET_G -> DATASET_G_LINE_COUNT;
+                        case DATASET_P -> DATASET_P_LINE_COUNT;
+                    };
+                }
+            }
+        }
+
+        throw new IllegalStateException("Nao foi possivel determinar a quantidade de linhas para: " + file);
     }
 
     private String datasetsText(List<DatasetSelectionOption> datasets) {

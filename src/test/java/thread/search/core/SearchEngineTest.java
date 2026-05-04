@@ -61,4 +61,17 @@ class SearchEngineTest {
         assertFalse(results.isEmpty());
         assertEquals(2L, results.get(0).lineNumber());
     }
+
+    @Test
+    void charByCharSearchStopsOnFirstMismatchInLine() throws IOException {
+        Path file = tempDir.resolve("names.txt");
+        Files.writeString(file, "XMaria\nMaria\n", StandardCharsets.UTF_8);
+
+        SearchEngine engine = new SearchEngine(new InMemoryTextSearchStorage(), new CharByCharSearchStrategy());
+        List<SearchResult> results = engine.search(file, "Maria");
+
+        assertEquals(1, results.size());
+        assertEquals(2L, results.get(0).lineNumber());
+        assertEquals("Maria", results.get(0).match());
+    }
 }

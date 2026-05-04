@@ -35,17 +35,12 @@ public final class CharByCharSearchStrategy implements SearchStrategy {
             return false;
         }
 
-        for (int i = 0; i <= text.length() - target.length(); i++) {
-            int j = 0;
-            while (j < target.length() && text.charAt(i + j) == target.charAt(j)) {
-                j++;
-            }
-
-            if (j == target.length()) {
-                return true;
+        for (int i = 0; i < target.length(); i++) {
+            if (text.charAt(i) != target.charAt(i)) {
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 }
