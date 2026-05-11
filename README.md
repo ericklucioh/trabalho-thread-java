@@ -1,49 +1,84 @@
 # Trabalho Thread Java
 
-Aplicação em Java com interface Swing para buscar nomes em arquivos `.txt` dos datasets do trabalho.
+Aplicacao em Java 17 com interface Swing para buscar nomes em arquivos `.txt` dos datasets do trabalho.
 
-## Estado atual
+## Visao Geral
 
-- a interface Swing é a entrada principal
+- a interface Swing e a entrada principal
 - o caminho CLI foi removido
 - a busca suporta:
   - `line_by_line`
   - `char_by_char`
   - `regex`
-- a execução suporta:
+- a execucao suporta:
   - leitura direta do arquivo
-  - memória por lista de linhas
-  - memória por texto inteiro
+  - memoria por lista de linhas
+  - memoria por texto inteiro
 - o paralelismo divide o trabalho em blocos de linhas
+- o resultado mostra nome, arquivo, linha e tempo de execucao
 
-## Estrutura do projeto
+## Estrutura
 
 - `dataset_g/` e `dataset_p/`: datasets do trabalho
-- `src/main/java/thread/ui/`: UI Swing, controller e view
-- `src/main/java/thread/search/`: motor de busca, estratégias e particionamento
-- `Dockerfile` e `docker-compose.yml`: execução em container
+- `src/main/java/thread/ui/`: interface Swing, controllers e views
+- `src/main/java/thread/search/`: motor de busca, estrategias e particionamento
+- `src/test/java/`: testes automatizados
+- `scripts/`: scripts de compilacao e empacotamento
+- `Dockerfile`, `Dockerfile.dev` e `docker-compose.yml`: execucao em container
 
-## Como executar
+## Como Executar
+
+Com Docker:
 
 ```bash
 docker compose up --build
 ```
 
-Isso abre a interface Swing.
+Ou com o alvo do Makefile:
 
-## Modo de desenvolvimento
+```bash
+make run
+```
+
+## Desenvolvimento
+
+Para recompilar automaticamente enquanto edita:
 
 ```bash
 docker compose up --build dev
 ```
 
-O container de desenvolvimento recompila a aplicação dentro do ambiente do projeto.
+Ou:
 
-## Validação
+```bash
+make dev
+```
 
-Os scripts do projeto compilam e empacotam dentro do container:
+## Build e Testes
+
+Com Maven localmente, se voce tiver JDK 17 e Maven instalados:
+
+```bash
+mvn test
+mvn package
+```
+
+No ambiente em container:
 
 ```bash
 sh ./scripts/compile.sh
 sh ./scripts/package.sh
 ```
+
+## Comandos Uteis
+
+- `make build`: compila no container
+- `make package`: gera o jar no container
+- `make clean`: remove `target/`
+- `make gui-allow`: libera a exibicao de janelas no X local, se necessario
+
+## Observacoes
+
+- a aplicacao usa `thread.ui.UiApp` como classe principal
+- os resultados e arquivos gerados podem ser montados em `results/`
+- os datasets entram somente leitura no container
